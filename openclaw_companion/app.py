@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
@@ -14,6 +16,7 @@ from .focus import FocusMonitor
 from .kaomoji_status import KaomojiStatus, mood_from_tone
 from .models import CompanionMessage, FocusSnapshot, Tone
 from .personality import CompanionPersonality
+from .voicevox import VoicevoxSpeaker
 
 
 class StatusPanel(Static):
@@ -124,6 +127,7 @@ class OpenClawCompanionApp(App):
         self.ai_reactions = AIReactionEngine()
         self.activity_journal = ActivityJournal()
         self.kaomoji_status = KaomojiStatus()
+        self.voicevox = VoicevoxSpeaker()
         self.agent = AgentRunner()
         self.conversation_log: RichLog | None = None
         self.worker_log: RichLog | None = None
@@ -163,6 +167,10 @@ class OpenClawCompanionApp(App):
         tone, text = self.personality.greet()
         self.say(tone, text)
         self.kaomoji_status.update(mood="watching", message=text, busy=self.busy)
+        if self.voicevox.is_available():
+            self.write_worker("[green]VOICEVOX connected[/green]")
+        else:
+            self.write_worker("[yellow]VOICEVOX not found. Start VOICEVOX Engine on 127.0.0.1:50021 to enable speech.[/yellow]")
         self.set_interval(3.0, self.tick_focus)
 
     def on_unmount(self) -> None:
@@ -250,6 +258,7 @@ class OpenClawCompanionApp(App):
             return
         tone, text = reaction
         self.say(tone, text)
+        self.speak_warning(text)
 
     async def react_to_focus_with_worker(self, snapshot: FocusSnapshot) -> None:
         reaction = await self.ai_reactions.generate_focus(
@@ -261,6 +270,8 @@ class OpenClawCompanionApp(App):
             return
         tone, text = reaction
         self.say(tone, text)
+        if tone in {Tone.TEASE, Tone.ENCOURAGE}:
+            self.speak_warning(text)
 
     def write_user(self, text: str) -> None:
         if self.conversation_log is not None:
@@ -276,6 +287,12 @@ class OpenClawCompanionApp(App):
         message = CompanionMessage("Claw", text, tone)
         self.conversation_log.write(message.line)
         self.kaomoji_status.update(mood=mood_from_tone(tone), message=text, busy=self.busy)
+
+    def speak_warning(self, text: str, *, force: bool = False) -> None:
+        self.run_worker(self.speak_warning_async(text, force=force), exclusive=False)
+
+    async def speak_warning_async(self, text: str, *, force: bool = False) -> None:
+        await asyncio.to_thread(self.voicevox.speak, text, force=force)
 
     def action_narrow_side(self) -> None:
         self.side_width = max(24, self.side_width - 8)
