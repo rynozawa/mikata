@@ -11,6 +11,7 @@ from .agent import AgentRunner
 from .ai_reactions import AIReactionEngine
 from .distraction import detect_distraction
 from .focus import FocusMonitor
+from .kaomoji_status import KaomojiStatus, mood_from_tone
 from .models import CompanionMessage, FocusSnapshot, Tone
 from .personality import CompanionPersonality
 
@@ -99,6 +100,8 @@ class OpenClawCompanionApp(App):
 
     BINDINGS = [
         ("ctrl+c", "quit", "Quit"),
+        ("q", "quit", "Quit"),
+        ("escape", "quit", "Quit"),
         ("ctrl+h", "narrow_side", "Side -"),
         ("ctrl+l", "widen_side", "Side +"),
         ("ctrl+j", "grow_worker", "Worker +"),
@@ -120,6 +123,7 @@ class OpenClawCompanionApp(App):
         self.personality = CompanionPersonality()
         self.ai_reactions = AIReactionEngine()
         self.activity_journal = ActivityJournal()
+        self.kaomoji_status = KaomojiStatus()
         self.agent = AgentRunner()
         self.conversation_log: RichLog | None = None
         self.worker_log: RichLog | None = None
@@ -130,6 +134,7 @@ class OpenClawCompanionApp(App):
         self.busy = False
         self.side_width = 42
         self.companion_percent = 50
+        self.layout_version = 0
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -157,15 +162,37 @@ class OpenClawCompanionApp(App):
         self.focus_monitor.start()
         tone, text = self.personality.greet()
         self.say(tone, text)
+        self.kaomoji_status.update(mood="watching", message=text, busy=self.busy)
         self.set_interval(3.0, self.tick_focus)
 
     def on_unmount(self) -> None:
         self.focus_monitor.stop()
 
+    async def on_key(self, event) -> None:
+        key_actions = {
+            "f5": self.action_narrow_side,
+            "f6": self.action_widen_side,
+            "f7": self.action_grow_worker,
+            "f8": self.action_grow_companion,
+            "alt+left": self.action_narrow_side,
+            "alt+right": self.action_widen_side,
+            "alt+down": self.action_grow_worker,
+            "alt+up": self.action_grow_companion,
+        }
+        action = key_actions.get(event.key)
+        if action is None:
+            return
+        event.prevent_default()
+        event.stop()
+        action()
+
     async def on_input_submitted(self, event: Input.Submitted) -> None:
         task = event.value.strip()
         event.input.value = ""
         if not task:
+            return
+        if task.lower() in {"q", "quit", "exit", ":q", "/quit"}:
+            self.exit()
             return
         if self.busy:
             self.say(Tone.ENCOURAGE, "今Workerが動いてる。終わったら次を受けるね。")
@@ -175,6 +202,7 @@ class OpenClawCompanionApp(App):
 
     async def run_task(self, task: str) -> None:
         self.busy = True
+        self.kaomoji_status.update(mood="working", message="Workerが作業中。", busy=self.busy)
         tone, text = self.personality.task_started(task)
         self.say(tone, text)
         tone, text = self.personality.task_working()
@@ -185,16 +213,19 @@ class OpenClawCompanionApp(App):
                 self.write_worker(line)
             tone, text = self.personality.task_done()
             self.say(tone, text)
+            self.kaomoji_status.update(mood="done", message=text, busy=self.busy)
         except Exception as exc:
             tone, text = self.personality.task_failed()
             self.say(tone, f"{text} ({exc})")
             self.write_worker(f"[red]error[/red] {exc}")
+            self.kaomoji_status.update(mood="error", message=text, busy=self.busy)
         finally:
             self.busy = False
 
     def tick_focus(self) -> None:
         snapshot = self.focus_monitor.sample()
         self.activity_journal.record(snapshot)
+        self.kaomoji_status.update(snapshot=snapshot, busy=self.busy)
         if self.status is not None:
             self.status.update_from_snapshot(snapshot)
         distraction = detect_distraction(snapshot.active_window)
@@ -244,6 +275,7 @@ class OpenClawCompanionApp(App):
             return
         message = CompanionMessage("Claw", text, tone)
         self.conversation_log.write(message.line)
+        self.kaomoji_status.update(mood=mood_from_tone(tone), message=text, busy=self.busy)
 
     def action_narrow_side(self) -> None:
         self.side_width = max(24, self.side_width - 8)
@@ -267,20 +299,23 @@ class OpenClawCompanionApp(App):
         self.apply_layout_sizes()
 
     def apply_layout_sizes(self, announce: bool = True) -> None:
+        self.layout_version += 1
         if self.side_panel is not None:
             self.side_panel.styles.width = self.side_width
+            self.side_panel.styles.min_width = self.side_width
+            self.side_panel.styles.max_width = self.side_width
             self.side_panel.refresh(layout=True)
         if self.companion_panel is not None:
-            self.companion_panel.styles.height = f"{self.companion_percent}%"
+            self.companion_panel.styles.height = f"{self.companion_percent}fr"
             self.companion_panel.refresh(layout=True)
         if self.worker_panel is not None:
-            self.worker_panel.styles.height = f"{100 - self.companion_percent}%"
+            self.worker_panel.styles.height = f"{100 - self.companion_percent}fr"
             self.worker_panel.refresh(layout=True)
         self.refresh(layout=True)
         if announce:
             self.say(
                 Tone.NEUTRAL,
-                f"layout: Focus {self.side_width}, Companion {self.companion_percent}%",
+                f"layout #{self.layout_version}: Focus {self.side_width}, Companion {self.companion_percent}%",
             )
 
 
