@@ -1,64 +1,71 @@
-# ADHD OpenClaw Pet
+# OpenClaw Companion
 
-画面の端にAIキャラが常駐し、タスク集中とOpenClawのコーディング作業を一緒に見せるハッカソンMVPです。
+Terminal companion worker prototype.
 
-## セットアップ
+It stays in the terminal, helps with coding tasks, and reacts to focus drift like a friendly coworker sitting next to you.
 
-```bash
-npm install
-npm run dev
+## MVP
+
+- CLI UI with Textual
+- Task input and progress log
+- Local command execution with `!`
+- Delegation to the local OpenClaw/OpenClew agent on this PC
+- Focus monitor for keyboard activity, idle time, active window, and app switching
+- AI-generated distraction reactions through the local agent
+
+## Setup
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -e ".[windows-monitor]"
 ```
 
-ブラウザで `http://127.0.0.1:5173` を開きます。
+## Connect To Local OpenClaw
 
-macOSで常駐風ウィンドウも出す場合:
+By default Companion tries these local commands:
 
-```bash
-npm run desktop
+1. `openclaw`
+2. `openclew`
+3. `codex`
+
+If your local agent uses a different command shape, set a command template:
+
+```powershell
+$env:OPENCLAW_COMPANION_AGENT_CMD='openclaw run --yes {prompt}'
+openclaw-companion
 ```
 
-## OpenClaw連携
+If your agent expects the prompt on stdin:
 
-デフォルトはデモモードです。OpenClaw未インストール環境でも、実装中、テスト中、commit中、PR作成中、完了の流れを再現します。
-
-実OpenClawを走らせる場合:
-
-```bash
-OPENCLAW_REAL=1 OPENCLAW_WORKSPACE=/path/to/demo-repo npm run dev
+```powershell
+$env:OPENCLAW_COMPANION_AGENT_CMD='openclaw run --yes'
+$env:OPENCLAW_COMPANION_AGENT_STDIN='1'
+openclaw-companion
 ```
 
-このモードでは、アプリが `openclaw agent --message ... --thinking high` を実行します。ハッカソンでは必ずデモ用リポジトリを `OPENCLAW_WORKSPACE` に指定してください。
+The `{prompt}` placeholder is replaced with the task or companion reaction prompt.
 
-## プライバシー境界
+## Usage
 
-MVPで扱うのはメタ情報のみです。
+- Type a task and press Enter.
+- `!dir`, `!pytest`, etc. run local shell commands.
+- Normal tasks are passed to the local OpenClaw/OpenClew worker.
+- Examples:
+  - `htmlでテトリスを実装して`
+  - `課題.pdfから問題を解いて実装して`
+  - `このプロジェクトのREADMEを整えて`
+- When Twitter/X, YouTube, Steam, games, Discord, etc. become active, Companion asks the local agent to generate a short nudge.
+- `Ctrl+C` quits.
 
-- アイドル秒数
-- アクティブアプリ名
-- Gitブランチ、未コミット数、最終コミット
-- OpenClawジョブ状態と実行ログ
-- 直近のユーザー入力メモ
+## Files
 
-以下は保存しません。
-
-- キー入力本文
-- スクリーンショット
-- メール本文
-- チャット本文
-- 画面本文
-
-## デモの流れ
-
-1. 今日のタスクを追加し、「今やる1つ」にする
-2. AIキャラが現在タスクと気分に応じた声かけを出す
-3. `OpenClawに任せる` を押す
-4. キャラが作業中の動きになり、OpenClawログが進む
-5. `停止` や `脱線` を押して、リマインドの反応を見る
-6. 完了後もキャラが応援・整理モードで伴走する
-
-## 検証コマンド
-
-```bash
-npm test -- --run
-npm run build
-```
+- `openclaw_companion/app.py`: Textual UI
+- `openclaw_companion/agent.py`: task delegation and shell commands
+- `openclaw_companion/openclaw_bridge.py`: local OpenClaw/OpenClew bridge
+- `openclaw_companion/focus.py`: focus monitor
+- `openclaw_companion/distraction.py`: distraction detection
+- `openclaw_companion/ai_reactions.py`: local-agent-generated reactions
+- `docs/ARCHITECTURE.md`: architecture notes
+- `docs/DEMO.md`: demo scenario
+- `docs/FUTURE.md`: future ideas

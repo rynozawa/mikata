@@ -1,0 +1,24 @@
+[project]
+name = "openclaw-companion"
+version = "0.1.0"
+description = "Terminal companion worker prototype for OpenClaw-style collaborative coding."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "textual>=0.80.0",
+    "rich>=13.7.0",
+    "psutil>=5.9.0",
+]
+
+[project.optional-dependencies]
+windows-monitor = [
+    "pynput>=1.7.7",
+    "pygetwindow>=0.0.9",
+]
+
+[project.scripts]
+openclaw-companion = "openclaw_companion.app:main"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
