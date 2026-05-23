@@ -16,10 +16,13 @@ class Tone(str, Enum):
 class FocusSnapshot:
     score: int
     keyboard_events: int
+    mouse_events: int
     idle_seconds: float
     terminal_active: bool
     app_switches: int
     active_window: str
+    activity_level: str
+    context: str
     timestamp: datetime = field(default_factory=datetime.now)
 
 

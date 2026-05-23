@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Packaging
+*.egg-info/
+build/
+dist/
+
+# Local runtime output
+logs/
+*.log
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Local scratch files
+wheather.txt

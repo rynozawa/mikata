@@ -7,7 +7,11 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass
 
 
-DEFAULT_AGENT_COMMANDS = ("openclaw", "openclew", "codex")
+DEFAULT_AGENT_COMMANDS = (
+    "openclaw",
+    "openclew",
+    "codex exec --sandbox workspace-write",
+)
 
 
 @dataclass(slots=True)
@@ -36,7 +40,7 @@ class LocalAgentBridge:
         command = os.getenv("OPENCLAW_COMPANION_AGENT_CMD", "").strip()
         if command:
             return [shlex.split(command, posix=os.name != "nt")]
-        return [[candidate] for candidate in DEFAULT_AGENT_COMMANDS]
+        return [shlex.split(candidate, posix=os.name != "nt") for candidate in DEFAULT_AGENT_COMMANDS]
 
     def is_configured(self) -> bool:
         return bool(self.configured_command())
