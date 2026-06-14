@@ -41,9 +41,9 @@ class CompanionPersonality:
 
         self.last_band = band
         self.last_reacted_at = now
-        return self._message_for_band(band, snapshot)
+        return self._message_for_band(band)
 
-    def _message_for_band(self, band: str, snapshot: FocusSnapshot) -> tuple[Tone, str]:
+    def _message_for_band(self, band: str) -> tuple[Tone, str]:
         if band == "flow":
             return Tone.PRAISE, self.rng.choice(
                 [
