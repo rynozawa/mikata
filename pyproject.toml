@@ -1,7 +1,7 @@
 [project]
 name = "openclaw-companion"
 version = "0.1.0"
-description = "Terminal companion worker prototype for OpenClaw-style collaborative coding."
+description = "Terminal companion for developers using Codex/OpenClaw-style local AI coding agents."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -11,6 +11,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+]
 windows-monitor = [
     "pynput>=1.7.7",
     "pygetwindow>=0.0.9",
@@ -22,3 +25,11 @@ openclaw-companion = "openclaw_companion.app:main"
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+
+[tool.setuptools.packages.find]
+include = ["openclaw_companion*"]
+exclude = ["tests*", "node_modules*"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

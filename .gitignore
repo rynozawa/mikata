@@ -12,15 +12,23 @@ env/
 *.egg-info/
 build/
 dist/
+node_modules/
+.vite/
 
 # Local runtime output
 logs/
 *.log
+.codex-pet-runs/
 
 # Editor / OS
 .DS_Store
 Thumbs.db
 .vscode/
+
+# Local secrets and machine-specific config
+.env
+.env.*
+!.env.example
 
 # Local scratch files
 wheather.txt

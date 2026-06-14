@@ -1,183 +1,185 @@
-﻿# OpenClaw Companion
+# OpenClaw Companion
 
-ターミナル上で一緒に作業してくれる「Companion Worker」のハッカソン向けプロトタイプです。
+OpenClaw Companion is an open-source terminal companion for developers using
+local AI coding agents such as Codex, OpenClaw, or OpenClew.
 
-OpenClaw Companion は、コーディングや課題実装を代行するだけのCLIではなく、作業中のユーザーの横にいる友人・先輩・共同開発者のように振る舞います。集中している時は静かに伴走し、脱線しそうな時は軽い皮肉や励ましで作業へ戻します。
+It stays next to your coding workflow in the terminal: you can delegate a task
+to a local agent, run shell commands, keep a lightweight progress log, and get
+small focus nudges when your active window suggests you have drifted away from
+the work. The project is intentionally local-first so individual developers and
+OSS maintainers can experiment with agent workflows without sending project
+state to a hosted service by default.
 
-## 想定ユーザー
+## Why This Exists
 
-- CLI中心で作業するソフトウェア開発者
-- 42 Tokyo生など、ターミナルで課題に取り組む人
-- 一人作業で集中維持が難しい人
-- ADHD傾向などで作業開始・継続に困難がある人
+AI coding agents are useful, but the surrounding workflow can still feel
+fragmented: prompts live in one place, commands in another, progress in another,
+and focus recovery is left to the developer. OpenClaw Companion explores a small
+OSS layer around those tools:
 
-## 主な機能
+- a terminal UI for task delegation and progress feedback
+- a bridge to Codex/OpenClaw-style local agent commands
+- local command execution with explicit `!` commands
+- local focus and distraction signals
+- optional VOICEVOX speech for focus recovery nudges
+- a two-line terminal status file for side-pane displays
 
-- Textual製のターミナルUI
-- CompanionログとWorkerログの分離表示
-- OpenClaw / Codex などローカルAIワーカーへのタスク委譲
-- `!pytest` や `!dir` などのローカルコマンド実行
-- キーボード、マウス、アクティブウィンドウ、アイドル時間の簡易観測
-- X / YouTube / ゲーム / SNS などへの脱線検知
-- 状況に応じた励まし、皮肉、応援メッセージ生成
-- `docs/terminal-kaomoji.txt` に2行の顔文字ステータスを出力
-- VOICEVOX Engine が起動している場合、脱線・停滞時の注意を読み上げ
+The goal is not to replace an AI coding agent. It is to make agent-assisted
+maintenance work easier to operate, observe, and improve.
 
-## セットアップ
+## Status
+
+This is an early prototype. The terminal UI, local command bridge, focus signals,
+distraction detection, VOICEVOX integration, and kaomoji status output are
+present. APIs and UI behavior may change while the project is still small.
+
+## Features
+
+- Textual-based terminal UI
+- Separate companion and worker logs
+- Task delegation to local AI workers such as Codex, OpenClaw, or OpenClew
+- `!pytest`, `!dir`, and other explicit local shell commands
+- Keyboard, mouse, active-window, idle-time, and app-switching signals
+- Distraction detection for X, YouTube, games, social apps, and similar windows
+- AI-generated or rule-based focus nudges
+- `docs/terminal-kaomoji.txt` side-pane status output
+- Optional VOICEVOX Engine speech for distraction or stalled-work nudges
+
+## Setup
+
+Requirements:
+
+- Python 3.10+
+- A local agent command such as `codex`, `openclaw`, or `openclew` if you want
+  task delegation
+- Windows optional dependencies if you want active-window monitoring on Windows
+- Optional VOICEVOX Engine if you want local speech output
+
+Create an environment and install the package:
 
 ```powershell
-cd C:\Users\nsabu\Documents\mikatahakkason
+cd <YOUR_PROJECT_DIR>
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -e ".[windows-monitor]"
+pip install -e ".[dev,windows-monitor]"
 ```
 
-## 起動
+On macOS or Linux:
 
-```powershell
+```bash
+cd <YOUR_PROJECT_DIR>
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+```
+
+## Run
+
+```bash
 openclaw-companion
 ```
 
-仮想環境を有効化せずに起動する場合:
+In the terminal UI:
+
+- Type a normal task to send it to the configured local agent.
+- Prefix a command with `!` to run it locally, for example `!pytest`.
+- Press `q`, `Esc`, or `Ctrl+C` to quit.
+
+## Connect Codex, OpenClaw, Or Another Local Agent
+
+By default, Companion tries these commands in order:
+
+1. `openclaw`
+2. `openclew`
+3. `codex`
+
+If your local agent uses a different command shape, set a command template:
 
 ```powershell
-C:\Users\nsabu\Documents\mikatahakkason\.venv\Scripts\openclaw-companion.exe
-```
-
-## OpenClaw / Codex 連携
-
-Companionは、通常タスクをローカルAIワーカーへ渡します。コマンド形式は環境変数で指定できます。
-
-Codex直結の例:
-
-```powershell
-$env:OPENCLAW_COMPANION_AGENT_CMD='C:\Users\nsabu\.vscode\extensions\openai.chatgpt-26.519.32039-win32-x64\bin\windows-x86_64\codex.exe exec --sandbox workspace-write -C C:\Users\nsabu\Documents\mikatahakkason {prompt}'
+$env:OPENCLAW_COMPANION_AGENT_CMD='<PATH_TO_CODEX_OR_OPENCLAW> {prompt}'
 openclaw-companion
 ```
 
-OpenClaw Gateway経由の例:
+The `{prompt}` placeholder is replaced with the task or companion reaction
+prompt.
+
+If your agent expects the prompt on stdin:
 
 ```powershell
-$env:OPENCLAW_COMPANION_AGENT_CMD='C:\Users\nsabu\AppData\Roaming\npm\openclaw.cmd agent --agent main --message {prompt}'
+$env:OPENCLAW_COMPANION_AGENT_CMD='<PATH_TO_CODEX_OR_OPENCLAW>'
+$env:OPENCLAW_COMPANION_AGENT_STDIN='1'
 openclaw-companion
 ```
 
-`{prompt}` がCompanionから渡されるタスク本文に置き換わります。
+Unix shell equivalent:
 
-## 使い方
-
-入力欄にタスクを入れて Enter を押します。
-
-例:
-
-```text
-htmlのテトリスを tetris.html として実装して
+```bash
+export OPENCLAW_COMPANION_AGENT_CMD='<PATH_TO_CODEX_OR_OPENCLAW> {prompt}'
+openclaw-companion
 ```
 
-```text
-課題.pdfを読んで、問題を解いて実装して
-```
+## Optional VOICEVOX Speech
 
-```text
-READMEを発表向けに整えて
-```
+If VOICEVOX Engine is running locally, Companion can read some distraction or
+stalled-work nudges aloud.
 
-`!` で始めるとAIではなくローカルシェルコマンドとして実行します。
-
-```text
-!pytest
-```
-
-```text
-!dir
-```
-
-## 画面操作
-
-- `F5` / `F6`: Focusペインを狭く / 広く
-- `F7` / `F8`: Companion / Worker の高さ比率を変更
-- `Alt+←` / `Alt+→`: Focusペインを狭く / 広く
-- `Alt+↓` / `Alt+↑`: Companion / Worker の高さ比率を変更
-- `Ctrl+0`: レイアウトをリセット
-- `q`, `Esc`, `Ctrl+C`: 終了
-- 入力欄で `exit`, `quit`, `:q`: 終了
-
-## 顔文字サイド表示
-
-`docs/terminal-kaomoji.txt` は、Companionの現在状態を2行だけで出力するファイルです。
-
-別ペインで次を実行すると、tmux風に端へ常駐表示できます。
-
-```powershell
-while ($true) { cls; Get-Content docs\terminal-kaomoji.txt; Start-Sleep 1 }
-```
-
-表示例:
-
-```text
-(=_=)
-I am working. Are you surfing?
-```
-
-PowerShell/tmuxで文字化けしにくいように、この2行表示はASCIIのみで出力しています。
-
-## VOICEVOX読み上げ
-
-VOICEVOX Engineをローカルで手動起動しておくと、Companionが脱線・停滞時の声かけを読み上げます。
-
-想定URL:
+Default endpoint:
 
 ```text
 http://127.0.0.1:50021
 ```
 
-VOICEVOX Engineを起動してからCompanionを起動してください。起動時にWorker欄へ `VOICEVOX connected` と出れば有効です。
-
-設定を変える場合:
+Configuration:
 
 ```powershell
-$env:VOICEVOX_URL="http://127.0.0.1:50021"
-$env:VOICEVOX_SPEAKER="3"
-$env:VOICEVOX_COOLDOWN="20"
+$env:VOICEVOX_URL='http://127.0.0.1:50021'
+$env:VOICEVOX_SPEAKER='3'
+$env:VOICEVOX_COOLDOWN='20'
 ```
 
-読み上げを無効化する場合:
+Disable speech:
 
 ```powershell
-$env:VOICEVOX_ENABLED="0"
+$env:VOICEVOX_ENABLED='0'
 ```
 
-## デモ手順
+## Side-Pane Status
 
-1. Companionを起動する
-2. `htmlのテトリスを tetris.html として実装して` を入力する
-3. Worker欄にCodex/OpenClawの作業ログが流れる
-4. XやYouTubeを開く
-5. Companionがすぐに皮肉を言い、顔文字表示も変わる
-6. `tetris.html` が生成されることを見せる
+`docs/terminal-kaomoji.txt` contains the current two-line companion status. You
+can show it in another terminal pane:
 
-## ディレクトリ構成
-
-```text
-openclaw_companion/
-  app.py              Textual UI
-  agent.py            タスク実行とシェルコマンド
-  openclaw_bridge.py  OpenClaw / Codex 連携
-  focus.py            集中状態の観測
-  distraction.py      X / YouTube / SNS などの検知
-  ai_reactions.py     AIによる声かけ生成
-  personality.py      ルールベースの声かけ
-  activity_journal.py 作業ログ記録
-  kaomoji_status.py   2行顔文字ステータス出力
-docs/
-  ARCHITECTURE.md
-  DEMO.md
-  FUTURE.md
-  terminal-kaomoji.txt
+```powershell
+while ($true) { cls; Get-Content docs\terminal-kaomoji.txt; Start-Sleep 1 }
 ```
 
-## 注意
+## Development
 
-- 作業ログは `logs/activity.jsonl` に保存されます。
-- `.venv/`, `logs/`, `__pycache__/`, `*.egg-info/` は `.gitignore` で除外しています。
-- X / YouTube は発表用に即時反応しやすくしています。
+Install development dependencies:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+```
+
+Run tests:
+
+```bash
+pytest
+```
+
+## Project Docs
+
+- [Architecture](docs/ARCHITECTURE.md)
+- [Demo Scenario](docs/DEMO.md)
+- [Future Ideas](docs/FUTURE.md)
+
+## Privacy And Secrets
+
+Do not commit local `.env` files, API keys, tokens, screenshots with private
+workspace data, or machine-specific paths. Configure local agents through
+environment variables such as `OPENCLAW_COMPANION_AGENT_CMD`.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
